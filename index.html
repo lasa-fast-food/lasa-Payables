@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LASA — Accounts Payable Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-top">
+    <div class="brand">
+      <span class="brand-logo">L</span>
+      <div>
+        <div class="brand-name">LASA</div>
+        <div class="brand-sub">AP Control</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a class="nav-item active" data-view="dashboard" href="#">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        Dashboard
+      </a>
+      <a class="nav-item" data-view="add" href="#">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        New Purchase
+      </a>
+      <a class="nav-item" data-view="history" href="#">
+        <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10"/><polyline points="12 6 12 12 16 14"/><path d="M22 2L18 6l4 4"/></svg>
+        History
+      </a>
+      <a class="nav-item" data-view="suppliers" href="#">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Suppliers
+      </a>
+      <a class="nav-item" data-view="reports" href="#">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Reports
+      </a>
+    </nav>
+  </div>
+  <div class="sidebar-footer">
+    <button class="btn-export" id="exportBtn">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export CSV
+    </button>
+  </div>
+</aside>
+
+<main class="main" id="main">
+
+  <!-- DASHBOARD -->
+  <section class="view" id="view-dashboard">
+    <header class="view-header">
+      <h1>Dashboard</h1>
+      <span class="date-badge" id="currentDate"></span>
+    </header>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Spend (All Time)</div>
+        <div class="stat-value" id="stat-total">R 0.00</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">This Month</div>
+        <div class="stat-value" id="stat-month">R 0.00</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Outstanding / Unpaid</div>
+        <div class="stat-value accent-red" id="stat-unpaid">R 0.00</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Transactions</div>
+        <div class="stat-value" id="stat-count">0</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Recent Purchases</div>
+        <table class="data-table" id="recent-table">
+          <thead>
+            <tr>
+              <th>Date</th><th>Item</th><th>Supplier</th><th>Amount</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="recent-body">
+            <tr><td colspan="5" class="empty-msg">No transactions yet</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">Spend by Category</div>
+        <canvas id="categoryChart" height="220"></canvas>
+        <div id="categoryLegend" class="chart-legend"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1.5rem">
+      <div class="card-title">Monthly Spend</div>
+      <canvas id="monthlyChart" height="160"></canvas>
+    </div>
+  </section>
+
+  <!-- ADD PURCHASE -->
+  <section class="view hidden" id="view-add">
+    <header class="view-header">
+      <h1>New Purchase</h1>
+    </header>
+    <div class="card form-card">
+      <div class="form-grid">
+        <div class="field">
+          <label>Date *</label>
+          <input type="date" id="f-date"/>
+        </div>
+        <div class="field">
+          <label>Supplier / Vendor *</label>
+          <input type="text" id="f-supplier" placeholder="e.g. Pick n Pay, Makro…" list="supplierList"/>
+          <datalist id="supplierList"></datalist>
+        </div>
+        <div class="field">
+          <label>Item / Stock Description *</label>
+          <input type="text" id="f-item" placeholder="e.g. Maize meal 10kg bags"/>
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <select id="f-category">
+            <option value="">— Select —</option>
+            <option>Raw Materials</option>
+            <option>Packaging</option>
+            <option>Equipment</option>
+            <option>Consumables</option>
+            <option>Stationery</option>
+            <option>Cleaning Supplies</option>
+            <option>Food & Beverages</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Quantity</label>
+          <input type="number" id="f-qty" placeholder="0" min="0"/>
+        </div>
+        <div class="field">
+          <label>Unit</label>
+          <select id="f-unit">
+            <option value="">—</option>
+            <option>Units</option>
+            <option>kg</option>
+            <option>g</option>
+            <option>L</option>
+            <option>ml</option>
+            <option>Bags</option>
+            <option>Boxes</option>
+            <option>Crates</option>
+            <option>Packets</option>
+            <option>Rolls</option>
+            <option>Pairs</option>
+            <option>Sets</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Unit Price (R) *</label>
+          <input type="number" id="f-unitprice" placeholder="0.00" min="0" step="0.01"/>
+        </div>
+        <div class="field">
+          <label>Total Amount (R)</label>
+          <input type="number" id="f-amount" placeholder="Auto-calculated" min="0" step="0.01"/>
+          <span class="field-hint">Leave blank to auto-calc from qty × unit price</span>
+        </div>
+        <div class="field">
+          <label>Payment Method</label>
+          <select id="f-paymethod">
+            <option value="">— Select —</option>
+            <option>Cash</option>
+            <option>EFT / Bank Transfer</option>
+            <option>Cheque</option>
+            <option>Credit Card</option>
+            <option>Account (30-day)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Payment Status</label>
+          <select id="f-status">
+            <option value="Paid">Paid</option>
+            <option value="Unpaid">Unpaid</option>
+            <option value="Partial">Partial</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Invoice / Receipt No.</label>
+          <input type="text" id="f-invoice" placeholder="INV-0001"/>
+        </div>
+        <div class="field">
+          <label>Due Date (if credit)</label>
+          <input type="date" id="f-duedate"/>
+        </div>
+        <div class="field full">
+          <label>Notes</label>
+          <textarea id="f-notes" rows="3" placeholder="Any extra details…"></textarea>
+        </div>
+      </div>
+      <div class="form-footer">
+        <div class="amount-preview" id="amtPreview"></div>
+        <button class="btn-primary" id="saveBtn">Save Purchase</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section class="view hidden" id="view-history">
+    <header class="view-header">
+      <h1>Purchase History</h1>
+      <div class="header-actions">
+        <input type="text" id="searchInput" placeholder="Search item, supplier…" style="width:220px"/>
+        <select id="filterStatus">
+          <option value="">All Statuses</option>
+          <option>Paid</option>
+          <option>Unpaid</option>
+          <option>Partial</option>
+        </select>
+        <select id="filterCategory">
+          <option value="">All Categories</option>
+        </select>
+      </div>
+    </header>
+    <div class="card">
+      <table class="data-table" id="history-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Item</th>
+            <th>Supplier</th>
+            <th>Category</th>
+            <th>Qty</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="history-body">
+          <tr><td colspan="8" class="empty-msg">No transactions yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SUPPLIERS -->
+  <section class="view hidden" id="view-suppliers">
+    <header class="view-header">
+      <h1>Suppliers</h1>
+    </header>
+    <div class="stats-grid" id="supplier-stats"></div>
+    <div class="card" style="margin-top:1.5rem">
+      <table class="data-table" id="supplier-table">
+        <thead>
+          <tr><th>Supplier</th><th>Transactions</th><th>Total Spend</th><th>Last Purchase</th><th>Outstanding</th></tr>
+        </thead>
+        <tbody id="supplier-body">
+          <tr><td colspan="5" class="empty-msg">No suppliers yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- REPORTS -->
+  <section class="view hidden" id="view-reports">
+    <header class="view-header">
+      <h1>Reports</h1>
+      <div class="header-actions">
+        <select id="reportPeriod">
+          <option value="all">All Time</option>
+          <option value="year">This Year</option>
+          <option value="month">This Month</option>
+          <option value="quarter">This Quarter</option>
+        </select>
+      </div>
+    </header>
+    <div class="stats-grid" id="report-stats"></div>
+    <div class="two-col" style="margin-top:1.5rem">
+      <div class="card">
+        <div class="card-title">Top Suppliers by Spend</div>
+        <canvas id="supplierChart" height="260"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Category Breakdown</div>
+        <canvas id="reportCatChart" height="260"></canvas>
+      </div>
+    </div>
+    <div class="card" style="margin-top:1.5rem">
+      <div class="card-title">Unpaid / Outstanding Items</div>
+      <table class="data-table">
+        <thead>
+          <tr><th>Date</th><th>Item</th><th>Supplier</th><th>Amount</th><th>Due Date</th><th>Status</th></tr>
+        </thead>
+        <tbody id="unpaid-body">
+          <tr><td colspan="6" class="empty-msg">No outstanding items</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay hidden" id="editModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Edit Purchase</h2>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field"><label>Date</label><input type="date" id="e-date"/></div>
+        <div class="field"><label>Supplier</label><input type="text" id="e-supplier"/></div>
+        <div class="field"><label>Item Description</label><input type="text" id="e-item"/></div>
+        <div class="field"><label>Category</label>
+          <select id="e-category">
+            <option value="">— Select —</option>
+            <option>Raw Materials</option><option>Packaging</option><option>Equipment</option>
+            <option>Consumables</option><option>Stationery</option><option>Cleaning Supplies</option>
+            <option>Food & Beverages</option><option>Other</option>
+          </select>
+        </div>
+        <div class="field"><label>Quantity</label><input type="number" id="e-qty"/></div>
+        <div class="field"><label>Unit</label>
+          <select id="e-unit">
+            <option value="">—</option><option>Units</option><option>kg</option><option>g</option>
+            <option>L</option><option>ml</option><option>Bags</option><option>Boxes</option>
+            <option>Crates</option><option>Packets</option><option>Rolls</option>
+          </select>
+        </div>
+        <div class="field"><label>Amount (R)</label><input type="number" id="e-amount" step="0.01"/></div>
+        <div class="field"><label>Payment Method</label>
+          <select id="e-paymethod">
+            <option value="">—</option><option>Cash</option><option>EFT / Bank Transfer</option>
+            <option>Cheque</option><option>Credit Card</option><option>Account (30-day)</option>
+          </select>
+        </div>
+        <div class="field"><label>Status</label>
+          <select id="e-status">
+            <option value="Paid">Paid</option><option value="Unpaid">Unpaid</option><option value="Partial">Partial</option>
+          </select>
+        </div>
+        <div class="field"><label>Invoice No.</label><input type="text" id="e-invoice"/></div>
+        <div class="field"><label>Due Date</label><input type="date" id="e-duedate"/></div>
+        <div class="field full"><label>Notes</label><textarea id="e-notes" rows="2"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-danger" id="deleteBtn">Delete</button>
+      <button class="btn-primary" id="updateBtn">Update</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
